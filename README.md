@@ -24,6 +24,14 @@ ESP_Encoder/
 └── README.md               # This file
 ```
 
+## How It Works
+
+All projects in this repository use the AS5047D 14-bit magnetic rotary encoder. Each encoder reading uses an **ultra-precision algorithm** that takes **4,096 raw SPI samples**, applies outlier rejection within blocks of 256 samples, then takes the median of all 16 block means. This produces sub-LSB angular precision.
+
+Communication follows an **on-demand** model: the PC sends a request over BLE, the master reads its own encoder and polls slaves via ESP-NOW, and a single response with angle and full diagnostics (AGC, magnetic field strength, error flags) is sent back. No data is transmitted until the PC asks.
+
+See each project's README for detailed protocol documentation.
+
 ## Getting Started
 
 ### Python Environment

@@ -11,7 +11,7 @@ Usage:
         probe = OliverAPI()
         await probe.connect()
 
-        # Read the latest encoder angles (updates every ~1s); (M0_deg, S0_deg)
+        # Request a fresh encoder reading on-demand; (M0_deg, S0_deg)
         m0, s0 = await probe.get_instantaneous_encoder_values()
 
         # Take a precision measurement (collects 5 samples); returns (M0_median, S0_median)
@@ -143,6 +143,9 @@ class OliverAPI:
         self._missed_packets = 0
         self._last_notify_time: float = 0.0
 
+        # Notification event (set on every _on_notify, used for on-demand reads)
+        self._notify_received: asyncio.Event = asyncio.Event()
+
         # Zero offsets
         self._zero_offsets: dict[str, float] = {e: 0.0 for e in ENCODERS}
 
@@ -245,10 +248,11 @@ class OliverAPI:
 
     async def get_instantaneous_encoder_values(self) -> tuple[Optional[float], Optional[float]]:
         """
-        Return the latest encoder readings (zero-adjusted) as (M0, S0) angles in degrees.
+        Request a fresh encoder reading from the gateway and return
+        (M0, S0) angles in degrees (zero-adjusted).
 
+        Sends a "READ" command and waits for the notification response.
         If not connected to BLE, reconnects first. Returns (None, None) if reconnect fails.
-        Value is None for an encoder that has not reported yet.
         """
         t0 = time.perf_counter()
         if not self.is_connected:
@@ -256,6 +260,16 @@ class OliverAPI:
             if not ok:
                 self._last_get_instantaneous_encoder_values_time_s = time.perf_counter() - t0
                 return (None, None)
+
+        self._notify_received.clear()
+        await self.send_command("READ")
+        try:
+            await asyncio.wait_for(self._notify_received.wait(), timeout=5.0)
+        except asyncio.TimeoutError:
+            logger.warning("READ response timed out.")
+            self._last_get_instantaneous_encoder_values_time_s = time.perf_counter() - t0
+            return (None, None)
+
         m0_raw = self._latest_raw["M0"]
         s0_raw = self._latest_raw["S0"]
         m0 = (m0_raw - self._zero_offsets["M0"]) if m0_raw is not None else None
@@ -271,9 +285,10 @@ class OliverAPI:
         timeout: float = MEASURE_TIMEOUT_S,
     ) -> tuple[Optional[float], Optional[float]]:
         """
-        Collect *num_samples* consecutive readings from every encoder,
+        Collect *num_samples* on-demand readings from every encoder,
         compute medians, and return (M0_median_deg, S0_median_deg).
 
+        Sends a "READ" command for each sample and waits for the response.
         If not connected to BLE, reconnects first. Returns (None, None) if reconnect fails.
         Raises TimeoutError if samples are not received in time.
         """
@@ -290,22 +305,24 @@ class OliverAPI:
         # Prepare collection buffers
         self._collect_samples = {e: [] for e in ENCODERS}
         self._collect_meta = {e: [] for e in ENCODERS}
-        self._collect_done = asyncio.Event()
-        self._samples_needed = num_samples
         self._collecting = True
+        per_sample_timeout = timeout / num_samples
 
         logger.info("Measurement #%d: collecting %d samples …", mid, num_samples)
 
-        # Wait for collection to complete (or timeout)
         try:
-            await asyncio.wait_for(self._collect_done.wait(), timeout=timeout)
-        except asyncio.TimeoutError:
-            self._collecting = False
-            self._last_get_encoder_values_time_s = time.perf_counter() - t0
-            raise TimeoutError(
-                f"Measurement #{mid} timed out after {timeout}s "
-                f"(got {len(self._collect_samples['M0'])}/{num_samples} M0 samples)."
-            )
+            for i in range(num_samples):
+                self._notify_received.clear()
+                await self.send_command("READ")
+                try:
+                    await asyncio.wait_for(self._notify_received.wait(), timeout=per_sample_timeout)
+                except asyncio.TimeoutError:
+                    self._collecting = False
+                    self._last_get_encoder_values_time_s = time.perf_counter() - t0
+                    raise TimeoutError(
+                        f"Measurement #{mid} timed out at sample {i+1}/{num_samples} "
+                        f"after {time.perf_counter() - t0:.1f}s."
+                    )
         finally:
             self._collecting = False
 
@@ -405,6 +422,7 @@ class OliverAPI:
                 self._latest_meta["M0"] = meta
 
             # ── Parse Slave (S0) ──
+            s_result = None
             if len(parts) > 2:
                 _, s_result = _parse_encoder_field(parts[2], g_idx)
                 if s_result is not None:
@@ -413,8 +431,8 @@ class OliverAPI:
                     self._latest_meta["S0"] = meta
 
             # ── Collecting samples for a measurement? ──
-            if self._collecting and self._collect_done is not None:
-                for enc, result in [("M0", m_result), ("S0", s_result if len(parts) > 2 else None)]:
+            if self._collecting:
+                for enc, result in [("M0", m_result), ("S0", s_result)]:
                     if result is None:
                         continue
                     raw_ang, meta = result
@@ -424,9 +442,8 @@ class OliverAPI:
                     self._collect_samples[enc].append(adj)
                     self._collect_meta[enc].append(meta)
 
-                # Done when master has enough samples
-                if len(self._collect_samples["M0"]) >= self._samples_needed:
-                    self._collect_done.set()
+            # Signal that a notification was received
+            self._notify_received.set()
 
         except Exception as exc:
             logger.debug("Parse error: %s | payload=%s", exc, data)

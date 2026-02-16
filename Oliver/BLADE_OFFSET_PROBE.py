@@ -65,6 +65,7 @@ class GatewayInterface:
         """Initialize a new measurement session"""
         self.measurement_id += 1
         self.collecting = True
+        self.samples_collected = False
         for key in self.current_samples:
             self.current_samples[key] = []
             self.sample_metadata[key] = []
@@ -213,11 +214,20 @@ class GatewayInterface:
             # Use M0 as reference (master is always present)
             if len(self.current_samples['M0']) >= self.samples_per_measurement:
                 self.collecting = False
+                self.samples_collected = True
                 self.display_results()
 
         except Exception as e:
             print(f"\nParse error: {e}")
             print(payload)
+
+    async def send_read(self):
+        """Send a READ command to trigger one on-demand reading."""
+        if self.client and self.client.is_connected:
+            try:
+                await self.client.write_gatt_char(COMMAND_UUID, b"READ")
+            except Exception:
+                pass
 
     async def send_cmd(self, cmd):
         if self.client and self.client.is_connected:
@@ -257,7 +267,7 @@ async def main():
         
         print("=" * 80)
         print(" OLIVER PRECISION MEASUREMENT SYSTEM")
-        print(" Mode: Manual sampling (5 samples per encoder)")
+        print(" Mode: On-demand sampling (5 samples per encoder)")
         print(" Encoders: M0 (Master) + S0 (Slave)")
         print("=" * 80)
         print("\nPress Enter to start a measurement (Z to set zero, Q to quit)\n")
@@ -270,13 +280,15 @@ async def main():
                         print("\nDisconnecting...")
                         break
                     elif k.lower() == 'z':
+                        await iface.send_read()
+                        await asyncio.sleep(0.3)
                         iface.set_zero()
                     elif k == '\n':
-                        # Start a new measurement
                         iface.start_measurement()
-                        # Data will be collected via notify callback
-                        # When 5 samples collected, results will auto-display
-                await asyncio.sleep(0.1)
+                        while iface.collecting:
+                            await iface.send_read()
+                            await asyncio.sleep(0.15)
+                await asyncio.sleep(0.05)
         except KeyboardInterrupt:
             print("\n\nDisconnecting...")
 

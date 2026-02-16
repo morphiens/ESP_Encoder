@@ -45,6 +45,8 @@ BLECharacteristic *pChar;
 BLECharacteristic *pCommandChar;
 bool pcConnected = false;
 bool rediscoverRequested = false;
+bool readRequested = false;
+bool slaveResponded[NUM_SLAVES] = {false};
 
 // ---------------- MASTER ENCODER SETTINGS ----------------
 #define ANGLECOM 0x3FFF
@@ -63,7 +65,6 @@ SPISettings spiSettings(10000000, MSBFIRST, SPI_MODE1);
 
 // Master encoder data
 Payload masterData = {255, 0, 0, 0, 0, 0, 0, 0}; // id=255 for master
-uint32_t lastMasterRead = 0;
 
 // ESP-NOW Receive Callback
 void onEspNowRecv(const esp_now_recv_info_t *info, const uint8_t *data,
@@ -93,6 +94,7 @@ void onEspNowRecv(const esp_now_recv_info_t *info, const uint8_t *data,
     if (p.id < NUM_SLAVES) {
       slaves[p.id] = p;
       lastSeenTime[p.id] = millis();
+      slaveResponded[p.id] = true;
     }
   }
 }
@@ -198,7 +200,11 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pChar) {
     String value =
         pChar->getValue().c_str(); // Convert std::string to Arduino String
-    if (value == "REDISCOVER") {
+    if (value == "READ") {
+      readRequested = true;
+      for (int i = 0; i < NUM_SLAVES; i++)
+        slaveResponded[i] = false;
+    } else if (value == "REDISCOVER") {
       rediscoverRequested = true;
       Serial.println("[CMD] Re-discovery requested from PC");
     }
@@ -344,21 +350,18 @@ void setup() {
 }
 
 void loop() {
-  static uint32_t lastPoll = 0;
-  static uint8_t current = 0;
   static uint32_t lastRediscover = 0;
 
   // Handle manual re-discovery request
   if (rediscoverRequested) {
     rediscoverRequested = false;
     Serial.println("\n[CMD] Manual re-discovery triggered!");
-    // Reset found flags for missing slaves only
     for (int i = 0; i < NUM_SLAVES; i++) {
       if (!slaveFound[i]) {
         Serial.printf("[REDISCOVER] Will search for S%d\n", i);
       }
     }
-    discoverSlaves(15000); // 15s re-discovery
+    discoverSlaves(15000);
   }
 
   // Automatic re-discovery every 10 seconds for missing slaves
@@ -374,7 +377,7 @@ void loop() {
       Serial.printf("[AUTO-REDISCOVER] Searching for %d missing slaves...\n",
                     missingCount);
       uint8_t broadcastAddr[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-      for (int attempt = 0; attempt < 5; attempt++) { // 5 quick attempts
+      for (int attempt = 0; attempt < 5; attempt++) {
         uint8_t ping = 0xFF;
         esp_now_send(broadcastAddr, &ping, 1);
         delay(200);
@@ -382,14 +385,16 @@ void loop() {
     }
   }
 
-  // Read Master's Own Encoder every 150ms (same rate as slave polling)
-  if (millis() - lastMasterRead > 150) {
-    lastMasterRead = millis();
+  // ── On-demand read: triggered by BLE "READ" command from PC ──
+  if (readRequested) {
+    readRequested = false;
+    gatewayPacketIdx++;
+
+    // 1. Read master's own encoder + diagnostics
     double masterAngle = getUltraPrecisionReading();
     masterData.value = (int)(masterAngle * 10000.0);
     masterData.packetIdx = gatewayPacketIdx;
 
-    // Read diagnostic registers
     uint16_t diaagc = readRegister(DIAAGC_REG);
     uint16_t mag = readRegister(MAG_REG);
     masterData.agc = diaagc & 0xFF;
@@ -397,75 +402,67 @@ void loop() {
     masterData.magl = (diaagc >> 8) & 0x01;
     masterData.magh = (diaagc >> 10) & 0x01;
     masterData.cof = (diaagc >> 9) & 0x01;
-  }
 
-  // Poll discovered slaves every 150ms
-  if (millis() - lastPoll > 150) {
-    lastPoll = millis();
-    if (slaveFound[current]) {
-      uint8_t req = current;
-      esp_now_send(slaveMACs[current], &req, 1);
+    // 2. Request data from all discovered slaves
+    for (int i = 0; i < NUM_SLAVES; i++) {
+      if (slaveFound[i]) {
+        uint8_t req = i;
+        esp_now_send(slaveMACs[i], &req, 1);
+      }
     }
-    current = (current + 1) % NUM_SLAVES;
-  }
 
-  // Report status every 1 second
-  static uint32_t lastReport = 0;
-  if (millis() - lastReport > 1000) {
-    lastReport = millis();
-    gatewayPacketIdx++;
+    // 3. Wait for slave responses (up to 200ms timeout)
+    uint32_t waitStart = millis();
+    while (millis() - waitStart < 200) {
+      bool allResponded = true;
+      for (int i = 0; i < NUM_SLAVES; i++) {
+        if (slaveFound[i] && !slaveResponded[i]) {
+          allResponded = false;
+          break;
+        }
+      }
+      if (allResponded)
+        break;
+      delay(1);
+    }
 
+    // 4. Build BLE message (same 7-field format)
     String bleMsg = String(gatewayPacketIdx);
 
-    // Add Master (M0) - full 7-field format: angle,pkt,agc,mag,magl,magh,cof
     bleMsg += "|M0:" + String(masterData.value) + "," +
               String(masterData.packetIdx) + "," +
               String(masterData.agc) + "," + String(masterData.mag) + "," +
               String(masterData.magl) + "," + String(masterData.magh) + "," +
               String(masterData.cof);
 
-    // Console output
-    Serial.println("\n" + String('=', 80));
-    Serial.printf(" GATEWAY IDX: %u | BLE: %s\n", gatewayPacketIdx,
-                  pcConnected ? "CONNECTED" : "DISCONNECTED");
-    Serial.println(String('-', 80));
-    Serial.println(" ID |      MAC ADDRESS      | VALUE | S_IDX | AGC | MAG  | STATUS");
-    Serial.println(String('-', 80));
-
-    // Print Master first
-    Serial.printf(" M0 | LOCAL ENCODER         | %5d | %5u | %3u | %4u | %s\n",
-                  masterData.value, masterData.packetIdx,
-                  masterData.agc, masterData.mag,
-                  masterData.cof ? "COF" : masterData.magl ? "MAGL" : masterData.magh ? "MAGH" : "OK");
-
-    // Then print all slaves
     for (int i = 0; i < NUM_SLAVES; i++) {
-      if (slaveFound[i]) {
-        uint32_t timeSince = (millis() - lastSeenTime[i]) / 1000;
-        Serial.printf(
-            " S%d | %02X:%02X:%02X:%02X:%02X:%02X | %5d | %5u | %3u | %4u | %s\n", i,
-            slaveMACs[i][0], slaveMACs[i][1], slaveMACs[i][2], slaveMACs[i][3],
-            slaveMACs[i][4], slaveMACs[i][5], slaves[i].value,
-            slaves[i].packetIdx, slaves[i].agc, slaves[i].mag,
-            slaves[i].cof ? "COF" : slaves[i].magl ? "MAGL" : slaves[i].magh ? "MAGH" : "OK");
-        // Full 7-field format for slaves too
+      if (slaveFound[i] && slaveResponded[i]) {
         bleMsg += "|S" + String(i) + ":" + String(slaves[i].value) + "," +
                   String(slaves[i].packetIdx) + "," +
                   String(slaves[i].agc) + "," + String(slaves[i].mag) + "," +
                   String(slaves[i].magl) + "," + String(slaves[i].magh) + "," +
                   String(slaves[i].cof);
       } else {
-        Serial.printf(" S%d |    NOT DISCOVERED     |  ---  |  ---  | --- | ---- | OFFLINE\n",
-                      i);
         bleMsg += "|S" + String(i) + ":OFFLINE,0";
       }
     }
-    Serial.println(String('=', 80));
 
-    // BLE notification
+    // 5. Send BLE notification
     if (pcConnected && pChar) {
       pChar->setValue(bleMsg.c_str());
       pChar->notify();
     }
+
+    // 6. Serial log
+    Serial.printf("[READ #%u] M0=%d", gatewayPacketIdx, masterData.value);
+    for (int i = 0; i < NUM_SLAVES; i++) {
+      if (slaveFound[i] && slaveResponded[i])
+        Serial.printf(" | S%d=%d", i, slaves[i].value);
+      else
+        Serial.printf(" | S%d=OFFLINE", i);
+    }
+    Serial.println();
   }
+
+  delay(1);
 }
