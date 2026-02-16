@@ -179,25 +179,113 @@ async def main():
 asyncio.run(main())
 ```
 
+## How It Works
+
+### On-Demand Data Flow
+
+Nothing reads the encoders until the PC asks. All devices sit idle until a request comes in:
+
+```
+PC (Python)                Master (ESP32C6)              Slave (ESP32C3)
+    │                           │                              │
+    │  BLE "READ" command       │                              │
+    │──────────────────────────►│                              │
+    │                           │  Read own encoder            │
+    │                           │  (4096 SPI samples)          │
+    │                           │                              │
+    │                           │  ESP-NOW request (slave ID)  │
+    │                           │─────────────────────────────►│
+    │                           │                              │  Read encoder
+    │                           │                              │  (4096 SPI samples)
+    │                           │  ESP-NOW response (payload)  │
+    │                           │◄─────────────────────────────│
+    │                           │                              │
+    │  BLE notification (data)  │                              │
+    │◄──────────────────────────│                              │
+```
+
+The Python scripts send a `"READ"` command for each sample needed. A 5-sample precision measurement sends 5 READs, each completing in ~100-150ms, for a total of ~500-750ms.
+
+### Encoder Angle Calculation
+
+Both master and slave use the same `getUltraPrecisionReading()` algorithm. Each call takes **4,096 raw SPI readings** from the AS5047D and applies two levels of noise reduction:
+
+**Step 1: Read 16 blocks of 256 samples**
+
+The AS5047D ANGLECOM register (14-bit, 0-16383 counts) is read via SPI. Any sample that fails the parity check is discarded and retried, guaranteeing 256 valid samples per block.
+
+**Step 2: Robust mean per block (outlier rejection)**
+
+For each block of 256 samples:
+- Compute the plain mean of all 256 values
+- Discard any sample more than 1.5 LSB from the mean (noise spikes)
+- Re-compute the mean using only the remaining samples
+
+This produces one "block mean" value per block (16 total).
+
+**Step 3: Median of block means**
+
+Sort the 16 block means and take the median. This rejects any block that was systematically noisy.
+
+**Step 4: Convert to degrees**
+
+```
+angle_degrees = (median_counts × 360) / 16384
+```
+
+**Summary:**
+
+```
+4096 raw SPI reads (16 blocks × 256 samples)
+    ├── Block 0:  256 samples → reject outliers → robust mean
+    ├── Block 1:  256 samples → reject outliers → robust mean
+    ├── ...
+    └── Block 15: 256 samples → reject outliers → robust mean
+                          ↓
+              16 block means → sort → median
+                          ↓
+              raw counts × 360 / 16384 = angle in degrees
+```
+
+The angle is then multiplied by 10000 and sent as an integer over ESP-NOW/BLE (e.g. `1669900` = 166.9900 degrees).
+
 ## Protocol Details
 
 ### ESP-NOW Communication
 
 - **Channel**: Configurable via `WIFI_CHANNEL` (default 1; use 1, 6, or 11 to isolate sets)
 - **Discovery**: Master broadcasts `0xFF`, slaves respond with their ID
-- **Data Request**: Master sends slave ID, slave responds with angle data
+- **Data Request**: Master sends slave ID, slave responds with angle + diagnostics
 
-### BLE Data Format
+### BLE Commands
+
+| Command      | Description                              |
+|--------------|------------------------------------------|
+| `READ`       | Request one on-demand encoder reading    |
+| `REDISCOVER` | Trigger slave re-discovery (15s scan)    |
+
+### BLE Data Format (7-field)
+
+Each encoder field includes angle, packet index, and AS5047D diagnostics:
 
 ```
-gateway_idx|M0:angle,pkt|S0:angle,pkt
+gateway_idx|M0:angle,pkt,agc,mag,magl,magh,cof|S0:angle,pkt,agc,mag,magl,magh,cof
 ```
 
-Example: `123|M0:1234567,45|S0:987654,44`
+Example: `42|M0:1669900,42,38,1823,0,0,0|S0:1253950,41,42,2015,0,0,0`
 
-- `gateway_idx`: Packet counter from master
-- `angle`: Encoder angle × 10000 (integer)
-- `pkt`: Per-encoder packet index
+| Field         | Description                                          |
+|---------------|------------------------------------------------------|
+| `gateway_idx` | Packet counter from master                           |
+| `angle`       | Encoder angle × 10000 (integer)                      |
+| `pkt`         | Per-encoder packet index                             |
+| `agc`         | AS5047D automatic gain control (0-255)               |
+| `mag`         | CORDIC magnitude (14-bit field strength)             |
+| `magl`        | Magnetic field too low flag (0 or 1)                 |
+| `magh`        | Magnetic field too high flag (0 or 1)                |
+| `cof`         | CORDIC overflow flag (0 or 1)                        |
+
+Offline slaves are reported as `S0:OFFLINE,0`.
 
 ## Troubleshooting
 
