@@ -7,9 +7,9 @@ from collections import deque
 from bleak import BleakClient, BleakScanner
 
 # BLE configuration
-DEVICE_NAME = "Oliver_1"
-CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-COMMAND_UUID = "8d53dc1d-1db7-4cd3-868b-8a527460aa84"
+DEVICE_NAME = "Oliver_3"
+CHARACTERISTIC_UUID = "1d4cd358-172d-4c33-b0b2-ddce9a071aab"
+COMMAND_UUID = "308a0c43-80f0-4b01-81e5-bb2798eb92f9"
 
 
 class GatewayInterface:
@@ -263,7 +263,7 @@ async def main():
     async with BleakClient(dev) as c:
         iface.client = c
         await c.start_notify(CHARACTERISTIC_UUID, notify)
-        print("✓ Connected to Oliver_1\n")
+        print("✓ Connected to Oliver_3\n")
         
         print("=" * 80)
         print(" OLIVER PRECISION MEASUREMENT SYSTEM")

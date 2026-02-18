@@ -55,6 +55,15 @@ Wireless ultra-precision encoder measurement system using ESP32 devices with ESP
 | Characteristic UUID| `b2c3d4e5-f6a7-8901-bcde-f12345678901`     |
 | Command UUID       | `c3d4e5f6-a7b8-9012-cdef-123456789012`     |
 
+### Oliver 3
+
+| Parameter          | Value                                      |
+|--------------------|--------------------------------------------|
+| Device Name        | `Oliver 3`                                  |
+| Service UUID       | `6ab88bb9-cf50-4564-b1c4-f53be2abc53f`     |
+| Characteristic UUID| `1d4cd358-172d-4c33-b0b2-ddce9a071aab`     |
+| Command UUID       | `308a0c43-80f0-4b01-81e5-bb2798eb92f9`     |
+
 ## Files
 
 ```
@@ -77,7 +86,7 @@ Oliver/
    ```cpp
    #define SLAVE_ID 0  // Change for each slave
    ```
-3. Set `WIFI_CHANNEL` to match the master this slave belongs to:
+3. Set `WIFI_CHANNEL` to match the master this slave belongs to (see channel table below):
    ```cpp
    #define WIFI_CHANNEL 1  // Must match master's WIFI_CHANNEL
    ```
@@ -91,7 +100,7 @@ Oliver/
    ```cpp
    #define NUM_SLAVES 1  // Number of slave devices
    ```
-3. Set `WIFI_CHANNEL` (must match the slaves for this set):
+3. Set `WIFI_CHANNEL` (must match the slaves for this set — see channel table below):
    ```cpp
    #define WIFI_CHANNEL 1  // ESP-NOW channel for this Oliver set
    ```

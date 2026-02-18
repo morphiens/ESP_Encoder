@@ -19,10 +19,10 @@
  */
 
 #define NUM_SLAVES 1 // FIXED: Was 4, now 5
-#define WIFI_CHANNEL 1 // ESP-NOW channel (use 1, 6, or 11 to isolate from other Oliver sets)
-#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define COMMAND_UUID "8d53dc1d-1db7-4cd3-868b-8a527460aa84"
+#define WIFI_CHANNEL 11 // ESP-NOW channel (use 1, 6, or 11 to isolate from other Oliver sets)
+#define SERVICE_UUID "6ab88bb9-cf50-4564-b1c4-f53be2abc53f"
+#define CHARACTERISTIC_UUID "1d4cd358-172d-4c33-b0b2-ddce9a071aab"
+#define COMMAND_UUID "308a0c43-80f0-4b01-81e5-bb2798eb92f9"
 
 typedef struct __attribute__((packed)) {
   uint8_t id;
@@ -322,7 +322,7 @@ void setup() {
 
   // BLE Init
   Serial.println("[BLE] Initializing...");
-  BLEDevice::init("Oliver_1");
+  BLEDevice::init("Oliver_3");
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks());
 
@@ -345,7 +345,7 @@ void setup() {
   pAdvertising->setScanResponse(true);
   BLEDevice::startAdvertising();
 
-  Serial.println("[BLE] Advertising as 'Oliver_1'");
+  Serial.println("[BLE] Advertising as 'Oliver_3'");
   Serial.println("\n=== GATEWAY READY ===\n");
 }
 
