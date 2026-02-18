@@ -12,7 +12,7 @@
  */
 
 #define SLAVE_ID 0      //<--- CHANGE THIS FOR EACH BOARD: 0, 1, 2, 3, 4
-#define WIFI_CHANNEL 1  // Must match master's WIFI_CHANNEL (use 1, 6, or 11)
+#define WIFI_CHANNEL 11  // Must match master's WIFI_CHANNEL (use 1, 6, or 11)
 
 // ---------------- COMMUNICATION ----------------
 typedef struct __attribute__((packed)) {
