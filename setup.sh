@@ -30,6 +30,8 @@ echo "Installing dependencies..."
 .venv/bin/pip install --upgrade pip
 .venv/bin/pip install -r requirements.txt
 
+source .venv/bin/activate
+
 echo
 echo "=== Setup Complete ==="
 echo
