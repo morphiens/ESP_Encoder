@@ -69,11 +69,11 @@ Wireless ultra-precision encoder measurement system using ESP32 devices with ESP
 ```
 Oliver/
 ├── master/
-│   └── master.ino          # ESP32C6 master firmware
+│   └── master.ino          # ESP32C6 master firmware (also in firmware/master/)
 ├── slave/
-│   └── slave.ino           # ESP32C3 slave firmware
-├── blade_offset_probe.py   # Python API for BLE communication
-├── BLADE_OFFSET_PROBE.py   # Standalone measurement script
+│   └── slave.ino           # ESP32C3 slave firmware (also in firmware/slave/)
+├── oliver.py               # Python API for BLE communication
+├── oliver_raw.py           # Raw BLE data / standalone measurement script
 └── README.md
 ```
 
@@ -130,12 +130,12 @@ pip install numpy bleak
 
 ## Usage
 
-### Run the API Demo
+### Run the API Script
 
 ```bash
 source .venv/bin/activate
 cd Oliver
-python blade_offset_probe.py
+python oliver.py
 ```
 
 **Interactive Commands:**
@@ -147,12 +147,12 @@ python blade_offset_probe.py
 - `r` - Reconnect
 - `q` - Quit
 
-### Run the Measurement Script
+### Run the Raw Data Script
 
 ```bash
 source .venv/bin/activate
 cd Oliver
-python BLADE_OFFSET_PROBE.py
+python oliver_raw.py
 ```
 
 **Interactive Commands:**
@@ -164,7 +164,7 @@ python BLADE_OFFSET_PROBE.py
 
 ```python
 import asyncio
-from blade_offset_probe import OliverAPI
+from oliver import OliverAPI
 
 async def main():
     probe = OliverAPI()
@@ -315,3 +315,7 @@ Offline slaves are reported as `S0:OFFLINE,0`.
 ## License
 
 MIT
+
+---
+
+**Author:** Swaraj Dangare
