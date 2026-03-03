@@ -64,6 +64,15 @@ Wireless ultra-precision encoder measurement system using ESP32 devices with ESP
 | Characteristic UUID| `1d4cd358-172d-4c33-b0b2-ddce9a071aab`     |
 | Command UUID       | `308a0c43-80f0-4b01-81e5-bb2798eb92f9`     |
 
+### Oliver 4
+
+| Parameter          | Value                                      |
+|--------------------|--------------------------------------------|
+| Device Name        | `Oliver 4`                                  |
+| Service UUID       | `a7f32d10-5c91-4b78-9e23-6d04c1e8f250`     |
+| Characteristic UUID| `b2e841a7-3f6c-4d19-8b57-0e92c3d7a164`     |
+| Command UUID       | `c9d153b8-7a4e-4e82-a630-1f05b2c8e935`     |
+
 ## Files
 
 ```
@@ -315,6 +324,7 @@ Offline slaves are reported as `S0:OFFLINE,0`.
 ## License
 
 MIT
+
 
 ---
 
