@@ -11,6 +11,7 @@ Each project lives in `projects/` with its own Python scripts. All projects shar
 | Template | Location | Use When |
 |---|---|---|
 | **Single Encoder** | [`firmware/single_encoder/`](firmware/single_encoder/) | One ESP reads one encoder, sends directly to PC via BLE |
+| **Dual Encoder** | [`firmware/dual_encoder/`](firmware/dual_encoder/) | One ESP reads two encoders on same SPI bus, sends to PC via BLE |
 | **Master** | [`firmware/master/`](firmware/master/) | ESP32C6 — aggregates encoder data from slaves, sends to PC via BLE |
 | **Slave** | [`firmware/slave/`](firmware/slave/) | ESP32C3 — reads one encoder, responds to master over ESP-NOW |
 
@@ -47,6 +48,8 @@ Esp_Encoder/
 ├── firmware/
 │   ├── single_encoder/
 │   │   └── single_encoder.ino    # Single ESP → BLE to PC
+│   ├── dual_encoder/
+│   │   └── dual_encoder.ino      # Single ESP reading 2 Encoders → BLE to PC
 │   ├── master/
 │   │   └── master.ino            # ESP32C6 master — aggregates slaves, sends BLE
 │   └── slave/
