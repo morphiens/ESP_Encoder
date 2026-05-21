@@ -40,11 +40,11 @@
 // SPI Pins (XIAO ESP32C3/C6)
 // SCK=D1, MISO=D0, MOSI=D10
 // Two CS pins for the two encoders
-const int PIN_CS1 = D7; // CS for Encoder 1
-const int PIN_CS2 = D6; // CS for Encoder 2
+const int PIN_CS1 = D8; // CS for Encoder 1
+const int PIN_CS2 = D7; // CS for Encoder 2
 
-const int PIN_SCK = D8;
-const int PIN_MISO = D9;
+const int PIN_SCK = D1;
+const int PIN_MISO = D0;
 const int PIN_MOSI = D10;
 
 SPISettings spiSettings(10000000, MSBFIRST, SPI_MODE1);
