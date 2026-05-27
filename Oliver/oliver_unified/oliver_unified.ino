@@ -63,7 +63,7 @@
 #define NUM_BLOCKS 16
 #define SAMPLES_PER_BLOCK 256
 
-const int PIN_CS   = D7;
+const int PIN_CS   = D8;
 const int PIN_SCK  = D1;
 const int PIN_MISO = D0;
 const int PIN_MOSI = D10;

@@ -1,0 +1,8 @@
+﻿Designator,Footprint,Quantity,Value,LCSC Part #
+"5V1, GND1",TestPoint_Pad_2.0x2.0mm,2,TestPoint,
+"C1, C2, C4",0603,3,100n,
+C3,0603,1,1u,
+"J1, J2",PinHeader_1x06_P1.27mm_Vertical,2,Conn_01x06_Pin,
+U1,QFN-24-1EP_5x5mm_P0.65mm_EP3.6x3.6mm,1,AEAT-8800-Q24,
+U2,Xiao_C6_SMD,1,Xiao C6,
+U3,SOP65P640X120-14N,1,AS5047P-ATSM,

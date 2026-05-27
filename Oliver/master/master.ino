@@ -20,20 +20,23 @@
  */
 
 #define NUM_SLAVES 1 // FIXED: Was 4, now 5
-#define WIFI_CHANNEL 11 // ESP-NOW channel (use 1, 6, or 11 to isolate from other Oliver sets)
-#define SERVICE_UUID "6ab88bb9-cf50-4564-b1c4-f53be2abc53f"
-#define CHARACTERISTIC_UUID "1d4cd358-172d-4c33-b0b2-ddce9a071aab"
-#define COMMAND_UUID "308a0c43-80f0-4b01-81e5-bb2798eb92f9"
+#define WIFI_CHANNEL                                                           \
+  11 // ESP-NOW channel (use 1, 6, or 11 to isolate from other Oliver sets) 11
+     // is for Oliver 4 set
+#define SERVICE_UUID "bbda2a57-2f66-4b7f-a71f-38873d08962b"
+#define CHARACTERISTIC_UUID "fed6602b-48c8-400d-8efa-63ca9efafc9f"
+#define COMMAND_UUID "cac7593c-1357-4cf1-950b-410a38070698"
+//above is the same as what is flashed in esp32c6
 
 typedef struct __attribute__((packed)) {
   uint8_t id;
-  int value;            // Angle * 10000
+  int value; // Angle * 10000
   uint32_t packetIdx;
-  uint8_t agc;          // AS5047D AGC value (0-255)
-  uint16_t mag;         // AS5047D CORDIC magnitude (14-bit)
-  uint8_t magl;         // Magnetic field too low  (0 or 1)
-  uint8_t magh;         // Magnetic field too high (0 or 1)
-  uint8_t cof;          // CORDIC overflow         (0 or 1)
+  uint8_t agc;  // AS5047D AGC value (0-255)
+  uint16_t mag; // AS5047D CORDIC magnitude (14-bit)
+  uint8_t magl; // Magnetic field too low  (0 or 1)
+  uint8_t magh; // Magnetic field too high (0 or 1)
+  uint8_t cof;  // CORDIC overflow         (0 or 1)
 } Payload;
 
 uint8_t slaveMACs[NUM_SLAVES][6];
@@ -323,7 +326,7 @@ void setup() {
 
   // BLE Init
   Serial.println("[BLE] Initializing...");
-  BLEDevice::init("Oliver_3");
+  BLEDevice::init("Hallever_gateway");
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks());
 
@@ -346,7 +349,7 @@ void setup() {
   pAdvertising->setScanResponse(true);
   BLEDevice::startAdvertising();
 
-  Serial.println("[BLE] Advertising as 'Oliver_3'");
+  Serial.println("[BLE] Advertising as 'hallever_gateway'");
   Serial.println("\n=== GATEWAY READY ===\n");
 }
 
@@ -431,18 +434,16 @@ void loop() {
     String bleMsg = String(gatewayPacketIdx);
 
     bleMsg += "|M0:" + String(masterData.value) + "," +
-              String(masterData.packetIdx) + "," +
-              String(masterData.agc) + "," + String(masterData.mag) + "," +
-              String(masterData.magl) + "," + String(masterData.magh) + "," +
-              String(masterData.cof);
+              String(masterData.packetIdx) + "," + String(masterData.agc) +
+              "," + String(masterData.mag) + "," + String(masterData.magl) +
+              "," + String(masterData.magh) + "," + String(masterData.cof);
 
     for (int i = 0; i < NUM_SLAVES; i++) {
       if (slaveFound[i] && slaveResponded[i]) {
         bleMsg += "|S" + String(i) + ":" + String(slaves[i].value) + "," +
-                  String(slaves[i].packetIdx) + "," +
-                  String(slaves[i].agc) + "," + String(slaves[i].mag) + "," +
-                  String(slaves[i].magl) + "," + String(slaves[i].magh) + "," +
-                  String(slaves[i].cof);
+                  String(slaves[i].packetIdx) + "," + String(slaves[i].agc) +
+                  "," + String(slaves[i].mag) + "," + String(slaves[i].magl) +
+                  "," + String(slaves[i].magh) + "," + String(slaves[i].cof);
       } else {
         bleMsg += "|S" + String(i) + ":OFFLINE,0";
       }
