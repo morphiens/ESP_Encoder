@@ -1,3 +1,4 @@
+
 #include <BLE2902.h>
 #include <BLEDevice.h>
 #include <BLESecurity.h>
@@ -177,7 +178,7 @@ void setup() {
 // ---------------- MAIN LOOP ----------------
 void loop() {
   // On-demand read: only fires when PC writes "READ" over BLE
-  if (readRequested) {
+  if (1) {
     readRequested = false;
     packetIdx++;
 
@@ -245,5 +246,5 @@ void loop() {
                   packetIdx, angleInt, angle, agc, magnitude, magl, magh, cof);
   }
 
-  delay(1);
+  delay(500);
 }

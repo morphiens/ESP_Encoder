@@ -12,19 +12,21 @@
  * Author: Swaraj Dangare
  */
 
-#define SLAVE_ID 0      //<--- CHANGE THIS FOR EACH BOARD: 0, 1, 2, 3, 4
-#define WIFI_CHANNEL 11  // Must match master's WIFI_CHANNEL (use 1, 6, or 11)
+#define SLAVE_ID 9 //<--- CHANGE THIS FOR EACH BOARD: 0, 1, 2, 3, 4
+#define WIFI_CHANNEL                                                           \
+  11 // Must match master's WIFI_CHANNEL (use 1, 6, or 11) 11 is for Oliver 4
+     // set
 
 // ---------------- COMMUNICATION ----------------
 typedef struct __attribute__((packed)) {
   uint8_t id;
-  int value;            // Angle * 10000
+  int value; // Angle * 10000
   uint32_t packetIdx;
-  uint8_t agc;          // AS5047D AGC value (0-255)
-  uint16_t mag;         // AS5047D CORDIC magnitude (14-bit)
-  uint8_t magl;         // Magnetic field too low  (0 or 1)
-  uint8_t magh;         // Magnetic field too high (0 or 1)
-  uint8_t cof;          // CORDIC overflow         (0 or 1)
+  uint8_t agc;  // AS5047D AGC value (0-255)
+  uint16_t mag; // AS5047D CORDIC magnitude (14-bit)
+  uint8_t magl; // Magnetic field too low  (0 or 1)
+  uint8_t magh; // Magnetic field too high (0 or 1)
+  uint8_t cof;  // CORDIC overflow         (0 or 1)
 } Payload;
 
 Payload pkt;

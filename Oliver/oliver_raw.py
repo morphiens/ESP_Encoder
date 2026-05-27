@@ -10,9 +10,10 @@ from collections import deque
 from bleak import BleakClient, BleakScanner
 
 # BLE configuration
-DEVICE_NAME = "Oliver_3"
-CHARACTERISTIC_UUID = "1d4cd358-172d-4c33-b0b2-ddce9a071aab"
-COMMAND_UUID = "308a0c43-80f0-4b01-81e5-bb2798eb92f9"
+DEVICE_NAME = "Oliver_4"
+SERVICE_UUID = "bbda2a57-2f66-4b7f-a71f-38873d08962b"
+CHARACTERISTIC_UUID = "fed6602b-48c8-400d-8efa-63ca9efafc9f"
+COMMAND_UUID = "cac7593c-1357-4cf1-950b-410a38070698"
 
 
 class GatewayInterface:
@@ -257,8 +258,10 @@ async def get_key():
 
 
 async def main():
-    print("Scanning for gateway...")
-    dev = await BleakScanner.find_device_by_filter(lambda d, a: d.name == DEVICE_NAME)
+    print(f"Scanning for Service UUID: {SERVICE_UUID}...")
+    dev = await BleakScanner.find_device_by_filter(
+        lambda d, ad: SERVICE_UUID.lower() in [s.lower() for s in ad.service_uuids]
+    )
     if not dev:
         print("✗ Gateway not found")
         return
