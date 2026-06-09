@@ -58,11 +58,11 @@
 
 // ─── Pin Definitions ──────────────────────────────────────────────────────────
 // GPIO numbers match the user's pin table exactly.
-#define PIN_SEL   D2   // SSI_SPI_SEL : HIGH = SSI, LOW = SPI
-#define PIN_SEL1   D8
-#define PIN_CLK   D1   // SCL / CLK   : shared clock
+#define PIN_SEL   D4   // SSI_SPI_SEL : HIGH = SSI, LOW = SPI
+#define PIN_SEL1   D3
+#define PIN_CLK   D5   // SCL / CLK   : shared clock
 #define PIN_NSL   D10   // NSL / DIN   : SSI enable / SPI MOSI
-#define PIN_DO    D0   // DO  / DOUT  : data from encoder / SPI MISO
+#define PIN_DO    D9   // DO  / DOUT  : data from encoder / SPI MISO
 
 // ─── SSI Settings ─────────────────────────────────────────────────────────────
 // Bit-banged; half-period determines SSI clock speed.
