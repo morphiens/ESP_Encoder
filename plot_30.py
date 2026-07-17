@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # --- Configuration ---
-CSV_FILENAME = "motor_encoder_continuous_calibration.csv"
+# CSV_FILENAME = "motor_encoder_continuous_calibration.csv"
+CSV_FILENAME = "TLE_2Stage_motor_encoder.csv"
 
 # 1. Load and Clean Data
 try:
@@ -110,7 +111,7 @@ ax_hist.legend(title="Targets", bbox_to_anchor=(1.01, 1), loc='upper left', font
 
 # Calculate total completed cycles dynamically
 total_cycles = len(df) // num_positions
-plt.suptitle(f"TLE5012 Rotary Axis 30 Degree Repeatability Report ({total_cycles} Complete {num_positions}-Step Cycles)", 
+plt.suptitle(f"TLE Rotary Axis 30 Degree, 2 stage filter ({total_cycles} Complete {num_positions}-Step Cycles)", 
              fontsize=16, fontweight='bold', y=0.96)
 
 plt.show()
