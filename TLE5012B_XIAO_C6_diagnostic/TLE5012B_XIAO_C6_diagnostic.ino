@@ -6,8 +6,8 @@
 #define SCK_PIN  19  // D8 (GPIO19)
 
 // TLE5012B Read Commands (MSB is 1 for Read)
-const uint16_t CMD_READ_ANGLE  = 0x8020; // Read Angle Value Register (0x02)
-const uint16_t CMD_READ_STATUS = 0x8010; // Read Mode Status Register (0x01) for AGC/Field check
+const uint16_t CMD_READ_ANGLE = 0x8020; // AVAL  (0x02) — angle value
+const uint16_t CMD_READ_STAT  = 0x8000; // STAT  (0x00) — S_MAGOL / S_XYOL magnet diagnostics
 
 // TLE5012B supports up to 8MHz, Mode 1 (CPOL=0, CPHA=1)
 SPISettings tleSPI(1000000, MSBFIRST, SPI_MODE1); 
@@ -53,8 +53,13 @@ void loop() {
   uint16_t angleData = rawValue & 0x7FFF; 
   float currentAngle = ((float)angleData * 360.0f) / 32768.0f;
 
-  uint16_t statusReg = readRegister(CMD_READ_STATUS);
-  uint8_t fieldStatus = (statusReg >> 10) & 0x01; 
+  // STAT: S_MAGOL (bit7) = field too weak / magnet too far
+  //       S_XYOL  (bit6) = XY amp out of limit / magnet too close
+  // fieldStatus: 1 = magnet OK, 0 = out of range (matches existing CSV convention)
+  uint16_t statusReg = readRegister(CMD_READ_STAT);
+  bool magTooFar   = (statusReg >> 7) & 0x01; // S_MAGOL
+  bool magTooClose = (statusReg >> 6) & 0x01; // S_XYOL
+  uint8_t fieldStatus = (magTooFar || magTooClose) ? 0 : 1;
 
   if (bufferFull) {
     runningSum -= readings[readIndex]; 
@@ -87,11 +92,13 @@ void loop() {
 //   uint16_t angleData = rawValue & 0x7FFF; 
 //   float currentAngle = ((float)angleData * 360.0f) / 32768.0f;
 
-//   // 2. Read Status/AGC equivalent
-//   uint16_t statusReg = readRegister(CMD_READ_STATUS);
-//   // Bit 10 of MOD_STAT is AVL (Amplitude Vector Limit error) 
-//   // 0 = Error (Field too weak or too strong), 1 = OK/Normal
-//   uint8_t fieldStatus = (statusReg >> 10) & 0x01; 
+//   // 2. Read STAT: S_MAGOL (bit7) / S_XYOL (bit6)
+//   // fieldStatus: 1 = Magnet OK, 0 = Magnet Error/Out of bounds
+//   uint16_t statusReg = readRegister(CMD_READ_STAT);
+//   bool magTooFar   = (statusReg >> 7) & 0x01;
+//   bool magTooClose = (statusReg >> 6) & 0x01;
+//   uint8_t fieldStatus = (magTooFar || magTooClose) ? 0 : 1;
+
 
 //   // 3. Apply Simple Moving Average (SMA) via Circular Buffer
 //   if (bufferFull) {
