@@ -6,8 +6,8 @@
 #define SCK_PIN  19  // D8 (GPIO19)
 
 // TLE5012B Read Commands
-const uint16_t CMD_READ_ANGLE  = 0x8020; 
-const uint16_t CMD_READ_STATUS = 0x8010; 
+const uint16_t CMD_READ_ANGLE = 0x8020; // AVAL (0x02) — angle value
+const uint16_t CMD_READ_STAT  = 0x8000; // STAT (0x00) — S_MAGOL / S_XYOL magnet diagnostics 
 
 SPISettings tleSPI(1000000, MSBFIRST, SPI_MODE1); 
 
@@ -117,8 +117,13 @@ void loop() {
   uint16_t angleData = rawValue & 0x7FFF; 
   float currentAngle = ((float)angleData * 360.0f) / 32768.0f;
 
-  uint16_t statusReg = readRegister(CMD_READ_STATUS);
-  uint8_t fieldStatus = (statusReg >> 10) & 0x01; 
+  // STAT: S_MAGOL (bit7) = field too weak / magnet too far
+  //       S_XYOL  (bit6) = XY amp out of limit / magnet too close
+  // fieldStatus: 1 = magnet OK, 0 = out of range (matches existing CSV convention)
+  uint16_t statusReg = readRegister(CMD_READ_STAT);
+  bool magTooFar   = (statusReg >> 7) & 0x01; // S_MAGOL
+  bool magTooClose = (statusReg >> 6) & 0x01; // S_XYOL
+  uint8_t fieldStatus = (magTooFar || magTooClose) ? 0 : 1;
 
   // 2. Feed current angle through the 2-Stage Cascade Filter
   float filteredAngle = processTwoStageFilter(currentAngle);
