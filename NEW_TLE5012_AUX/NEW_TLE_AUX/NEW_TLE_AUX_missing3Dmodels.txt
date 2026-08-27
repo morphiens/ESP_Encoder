@@ -1,0 +1,12 @@
+### Missing 3D models - created on 2026-08-10 16:58
+### Printed by checking_3D_models plugin
+Board file: /home/krishna-k-b/Documents/ESP_Encoder/NEW_TLE_AUX/NEW_TLE_AUX.kicad_pcb
+3D missing models written to:
+/home/krishna-k-b/Documents/ESP_Encoder/NEW_TLE_AUX/NEW_TLE_AUX_missing3Dmodels.txt
+-------
+('H1', '/home/krishna-k-b/Downloads/M2 x 0.4mm Thread 6mm LONG SOCKET HEAD CAP SCREW.STEP')
+('H2', '/home/krishna-k-b/Downloads/M2 x 0.4mm Thread 6mm LONG SOCKET HEAD CAP SCREW.STEP')
+('J1', '/usr/share/kicad/3dmodels/Connector_JST.3dshapes/JST_SHL_SM06B-SHLS-TF_1x06-1MP_P1.00mm_Horizontal.step')
+-------
+NUM of 3D missing models:3
+checked extensions ['.stp', '.step', '.stpZ']

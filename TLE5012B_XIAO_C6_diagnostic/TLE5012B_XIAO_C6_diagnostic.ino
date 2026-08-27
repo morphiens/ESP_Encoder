@@ -47,27 +47,63 @@ uint16_t readRegister(uint16_t command) {
   return response;
 }
 
+// void loop() {
+//   // Read and calculate angles continuously so your SMA filter stays fresh and running!
+//   uint16_t rawValue = readRegister(CMD_READ_ANGLE);
+//   uint16_t angleData = rawValue & 0x7FFF; 
+//   float currentAngle = ((float)angleData * 360.0f) / 32768.0f;
+
+//   uint16_t statusReg = readRegister(CMD_READ_STATUS);
+//   uint8_t fieldStatus = (statusReg >> 10) & 0x01; 
+
+//   if (bufferFull) {
+//     runningSum -= readings[readIndex]; 
+//   }
+//   readings[readIndex] = currentAngle;  
+//   runningSum += currentAngle;          
+//   readIndex++;                         
+//   if (readIndex >= FILTER_WINDOW) { readIndex = 0; bufferFull = true; }
+//   float smaAngle = bufferFull ? (runningSum / (float)FILTER_WINDOW) : (runningSum / (float)readIndex);
+
+//   // ONLY SEND SERIAL DATA WHEN REQUESTED BY PYTHON
+//   if (Serial.available() > 0) {
+//     char trigger = Serial.read();
+//     if (trigger == '?') {
+//       // Print a single snapshot frame
+//       Serial.print(currentAngle, 3);
+//       Serial.print(",");
+//       Serial.print(smaAngle, 3);
+//       Serial.print(",");
+//       Serial.println(fieldStatus);
+//     }
+//   }
+// }
+
 void loop() {
-  // Read and calculate angles continuously so your SMA filter stays fresh and running!
+  // 1. Read Angle
   uint16_t rawValue = readRegister(CMD_READ_ANGLE);
+  
+  // TLE5012B angle is 15-bit (bit 0 to 14). Bit 15 is the value-valid flag.
   uint16_t angleData = rawValue & 0x7FFF; 
   float currentAngle = ((float)angleData * 360.0f) / 32768.0f;
 
-  // STAT: S_MAGOL (bit7) = field too weak / magnet too far
-  //       S_XYOL  (bit6) = XY amp out of limit / magnet too close
-  // fieldStatus: 1 = magnet OK, 0 = out of range (matches existing CSV convention)
-  uint16_t statusReg = readRegister(CMD_READ_STAT);
-  bool magTooFar   = (statusReg >> 7) & 0x01; // S_MAGOL
-  bool magTooClose = (statusReg >> 6) & 0x01; // S_XYOL
-  uint8_t fieldStatus = (magTooFar || magTooClose) ? 0 : 1;
+  uint16_t statusReg = readRegister(CMD_READ_STATUS);
+  uint8_t fieldStatus = (statusReg >> 10) & 0x01; 
 
+  // 3. Apply Simple Moving Average (SMA) via Circular Buffer
   if (bufferFull) {
     runningSum -= readings[readIndex]; 
   }
+  
   readings[readIndex] = currentAngle;  
   runningSum += currentAngle;          
   readIndex++;                         
-  if (readIndex >= FILTER_WINDOW) { readIndex = 0; bufferFull = true; }
+  
+  if (readIndex >= FILTER_WINDOW) {
+    readIndex = 0;
+    bufferFull = true;                 
+  }
+
   float smaAngle = bufferFull ? (runningSum / (float)FILTER_WINDOW) : (runningSum / (float)readIndex);
 
   // ONLY SEND SERIAL DATA WHEN REQUESTED BY PYTHON
@@ -92,13 +128,11 @@ void loop() {
 //   uint16_t angleData = rawValue & 0x7FFF; 
 //   float currentAngle = ((float)angleData * 360.0f) / 32768.0f;
 
-//   // 2. Read STAT: S_MAGOL (bit7) / S_XYOL (bit6)
-//   // fieldStatus: 1 = Magnet OK, 0 = Magnet Error/Out of bounds
-//   uint16_t statusReg = readRegister(CMD_READ_STAT);
-//   bool magTooFar   = (statusReg >> 7) & 0x01;
-//   bool magTooClose = (statusReg >> 6) & 0x01;
-//   uint8_t fieldStatus = (magTooFar || magTooClose) ? 0 : 1;
-
+//   // 2. Read Status/AGC equivalent
+//   uint16_t statusReg = readRegister(CMD_READ_STATUS);
+//   // Bit 10 of MOD_STAT is AVL (Amplitude Vector Limit error) 
+//   // 0 = Error (Field too weak or too strong), 1 = OK/Normal
+//   uint8_t fieldStatus = (statusReg >> 10) & 0x01; 
 
 //   // 3. Apply Simple Moving Average (SMA) via Circular Buffer
 //   if (bufferFull) {
