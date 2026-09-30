@@ -4,12 +4,12 @@ import csv
 from collections import defaultdict
 
 # --- Configuration ---
-PORT_MOTOR = "/dev/ttyACM0"
-PORT_ENCODER = "/dev/ttyACM1"
+PORT_MOTOR = "/dev/ttyACM1"
+PORT_ENCODER = "/dev/ttyACM0"
 BAUD_RATE = 115200
 
-TOTAL_CYCLES = 500
-CSV_FILENAME = "motor_encoder_continuous_calibration.csv"
+TOTAL_CYCLES = 100
+CSV_FILENAME = "3.5mm_GMR_100cycle.csv"
 MOTOR_DELAY = 3.5  # 3.5 seconds to settle
 
 # Connect to Motor

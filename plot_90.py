@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # --- Configuration ---
-CSV_FILENAME = "motor_encoder_continuous_calibration.csv"
+CSV_FILENAME = "3.5mm_GMR_100cycle.csv"
 
 # 1. Load and Clean Data
 try:
