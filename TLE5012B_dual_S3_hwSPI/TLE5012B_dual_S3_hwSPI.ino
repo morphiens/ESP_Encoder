@@ -21,7 +21,7 @@ static const int PIN_CS1  = D0;   // GPIO1
 static const int PIN_CS2  = D1;   // GPIO2
 
 SPIClass spiBus(FSPI);
-SPISettings spiSettings(4000000, MSBFIRST, SPI_MODE1); // 4 MHz for clean half-duplex transitions
+SPISettings spiSettings(8000000, MSBFIRST, SPI_MODE1); // 4 MHz for clean half-duplex transitions
 
 // Register Commands
 const uint16_t CMD_READ_ANGLE = 0x8020;

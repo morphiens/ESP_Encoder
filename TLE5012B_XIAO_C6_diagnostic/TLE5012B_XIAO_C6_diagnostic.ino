@@ -87,7 +87,7 @@ void loop() {
   uint16_t angleData = rawValue & 0x7FFF; 
   float currentAngle = ((float)angleData * 360.0f) / 32768.0f;
 
-  uint16_t statusReg = readRegister(CMD_READ_STATUS);
+  uint16_t statusReg = readRegister(CMD_READ_STAT);
   uint8_t fieldStatus = (statusReg >> 10) & 0x01; 
 
   // 3. Apply Simple Moving Average (SMA) via Circular Buffer

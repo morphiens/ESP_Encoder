@@ -8,12 +8,12 @@
     "high_contrast_mode": 0,
     "net_color_mode": 1,
     "opacity": {
-      "images": 0.6000000238418579,
+      "images": 0.8600000143051147,
       "pads": 1.0,
       "shapes": 1.0,
-      "tracks": 1.0,
-      "vias": 1.0,
-      "zones": 0.6
+      "tracks": 0.46000000834465027,
+      "vias": 0.25,
+      "zones": 0.6899999976158142
     },
     "prototype_zone_fills": false,
     "selection_filter": {
@@ -53,7 +53,7 @@
       "board_outline_area",
       "ly_points"
     ],
-    "visible_layers": "00000000_00000000_00000000_00000085",
+    "visible_layers": "ffffffff_ffffffff_fffffff5_ff5fffff",
     "zone_display_mode": 0
   },
   "git": {
