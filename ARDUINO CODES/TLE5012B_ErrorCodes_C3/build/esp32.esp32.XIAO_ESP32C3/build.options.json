@@ -1,0 +1,9 @@
+{
+  "additionalFiles": "../..,../..",
+  "compiler.optimization_flags": "-Os",
+  "customBuildProperties": "",
+  "fqbn": "esp32:esp32:XIAO_ESP32C3:CDCOnBoot=cdc",
+  "hardwareFolders": "/home/krishna-k-b/.arduino15/packages/esp32/hardware/esp32/3.3.8,/home/krishna-k-b/.arduino15/packages/esp32/hardware/esp32/3.3.8",
+  "otherLibrariesFolders": "/home/krishna-k-b/Arduino/libraries",
+  "sketchLocation": "/home/krishna-k-b/Documents/ESP_Encoder/ARDUINO CODES/TLE5012B_ErrorCodes_C3"
+}

@@ -1,0 +1,5 @@
+
+# Large archives and generated files
+*.zip
+*.7z
+*.rar
