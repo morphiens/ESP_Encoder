@@ -26,7 +26,8 @@
 //   HL <n> <micros> ENC1: <deg> deg | ENC2: <deg> deg | ENC1_ERR: <mask> <names> | ENC2_ERR: <mask> <names>
 //   <deg>   filtered angle, or nan when this sample's angle must not be used
 //   <mask>  0x%08X error bit mask (bit numbers in the legend)
-//   <names> OK, or every active code joined by commas without spaces
+//   <names> OK, or every active code joined by commas without spaces.
+//           With serial command enum=1 this token is 0, or the enum numbers.
 //
 // Detail lines, only when PRINT_ERROR is 1, when a code appears and every
 // second while it stays active:
@@ -57,6 +58,11 @@ static constexpr uint32_t DETAIL_REPEAT_MS     = 1000UL;
 // 0 = do not print the detailed HL_ERR analysis.
 // 1 = print it when an error appears, and again every 1 s while it stays active.
 static constexpr uint8_t  PRINT_ERROR          = 0;
+
+// 0 = print error names (default). 1 = print EncoderErrorCode numbers.
+// Change at runtime by sending a line: enum=0 or enum=1
+// The variable cannot be named "enum"; that word is reserved in C++.
+static uint8_t ENUM_MODE = 0;
 static constexpr uint8_t  FRAME_RETRIES        = 2;
 static constexpr size_t   FILTER_WINDOW        = 8;
 
@@ -376,7 +382,7 @@ void printErrorField(uint32_t mask)
 {
     printTleErrorMask(Serial, mask);
     Serial.print(' ');
-    printTleErrorNames(Serial, mask);
+    printTleErrorNames(Serial, mask, ENUM_MODE != 0);
 }
 
 void printReadings(
@@ -447,7 +453,11 @@ void printErrorDetail(const EncoderState &encoder, uint8_t bit)
     Serial.print("HL_ERR ");
     Serial.print(encoder.name);
     Serial.print(" CODE=");
-    Serial.print(info.name);
+    if (ENUM_MODE) {
+        Serial.print(info.code);
+    } else {
+        Serial.print(info.name);
+    }
     Serial.print(" BIT=");
     Serial.print(bit);
     Serial.print(" LAYER=");
@@ -485,7 +495,7 @@ void trackErrorChanges(EncoderState &encoder, uint32_t nowMs)
         Serial.print("HL_ERR ");
         Serial.print(encoder.name);
         Serial.print(" CLEARED=");
-        printTleErrorNames(Serial, cleared);
+        printTleErrorNames(Serial, cleared, ENUM_MODE != 0);
         Serial.print(" STATUS=");
         printErrorField(current);
         Serial.println();
@@ -526,6 +536,8 @@ void printErrorLegend()
     for (uint8_t bit = 0; bit < TLE_ERROR_COUNT; ++bit) {
         Serial.print("HL_INFO BIT=");
         Serial.print(bit);
+        Serial.print(" ENUM=");
+        Serial.print(TLE_ERROR_TABLE[bit].code);
         Serial.print(" CODE=");
         Serial.print(TLE_ERROR_TABLE[bit].name);
         Serial.print(" LAYER=");
@@ -624,6 +636,40 @@ void captureStartupStatus(EncoderState &encoder)
 // ARDUINO ENTRY POINTS
 // ============================================================================
 
+// Accepts one line, "enum=0" or "enum=1", and switches the error token.
+void handleSerialCommands()
+{
+    static char command[8];
+    static uint8_t length = 0;
+
+    while (Serial.available()) {
+        const char c = (char)Serial.read();
+        if (c != '\n' && c != '\r') {
+            if (length < sizeof(command) - 1) {
+                command[length++] = c;
+            }
+            continue;
+        }
+        if (length == 0) {
+            continue;
+        }
+
+        command[length] = '\0';
+        length = 0;
+
+        if (strcmp(command, "enum=0") == 0) {
+            ENUM_MODE = 0;
+        } else if (strcmp(command, "enum=1") == 0) {
+            ENUM_MODE = 1;
+        } else {
+            continue;
+        }
+
+        Serial.print("HL_INFO ENUM=");
+        Serial.println(ENUM_MODE);
+    }
+}
+
 void setup()
 {
     Serial.begin(SERIAL_BAUD);
@@ -649,6 +695,8 @@ void setup()
 
 void loop()
 {
+    handleSerialCommands();
+
     static uint32_t sampleNumber = 0;
     static uint32_t nextSampleUs = 0;
     static uint32_t lastDiagnosticMs = 0;
